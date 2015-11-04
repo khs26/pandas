@@ -64,6 +64,7 @@ Performance Improvements
 - Improved performance of ``rolling_median`` (:issue:`11450`)
 
 - Improved performance to ``to_excel`` (:issue:`11352`)
+- Improved performance of ``andrews_curves`` (:issue:`11534`)
 
 .. _whatsnew_0171.bug_fixes:
 
