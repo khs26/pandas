@@ -543,13 +543,19 @@ def andrews_curves(frame, class_column, ax=None, samples=200, color=None,
         def f(t):
             x1 = amplitudes[0]
             result = x1 / sqrt(2.0)
-            harmonic = 1.0
-            for x_even, x_odd in zip(amplitudes[1::2], amplitudes[2::2]):
-                result += (x_even * np.sin(harmonic * t) +
-                           x_odd * np.cos(harmonic * t))
-                harmonic += 1.0
-            if len(amplitudes) % 2 != 0:
-                result += amplitudes[-1] * np.sin(harmonic * t)
+
+            # Take the rest of the coefficients and resize them appropriately. Take a copy of amplitudes as otherwise
+            # numpy deletes the element from amplitudes itself.
+            coeffs = np.delete(np.copy(amplitudes), 0)
+            coeffs.resize((coeffs.size + 1) / 2, 2)
+
+            # Generate the harmonics and arguments for the sin and cos functions.
+            harmonics = np.arange(0, coeffs.shape[0]) + 1
+            trig_args = np.outer(harmonics, t)
+
+            result += np.sum(coeffs[:, 0, np.newaxis] * np.sin(trig_args) +
+                             coeffs[:, 1, np.newaxis] * np.cos(trig_args),
+                             axis=0)
             return result
         return f
 
