@@ -1184,6 +1184,7 @@ def nancorr(ndarray[float64_t, ndim=2] mat, cov=False, minp=None):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def nancorr_spearman(ndarray[float64_t, ndim=2] mat, Py_ssize_t minp=1):
+    from cython.parallel import prange
     cdef:
         Py_ssize_t i, j, xi, yi, N, K
         ndarray[float64_t, ndim=2] result
@@ -1194,6 +1195,14 @@ def nancorr_spearman(ndarray[float64_t, ndim=2] mat, Py_ssize_t minp=1):
         float64_t vx, vy, sumx, sumxx, sumyy, mean, divisor
 
     N, K = (<object> mat).shape
+
+    cdef:
+        int64_t i_c, j_c, xi_c, yi_c, N_c, K_c
+        float64_t *result_c = <float64_t *>malloc((K * sizeof(float64_t))**2)
+        float64_t *maskedx_c
+        float64_t *maskedy_c
+        uint8_t *mask_c = <uint8_t *>malloc(K * sizeof(uint8_t) * N * sizeof(uint8_t))
+        int64_t *nobs_array = <int64_t *>malloc(K * sizeof(int64_t))
 
     result = np.empty((K, K), dtype=np.float64)
     mask = np.isfinite(mat).view(np.uint8)
@@ -1224,9 +1233,16 @@ def nancorr_spearman(ndarray[float64_t, ndim=2] mat, Py_ssize_t minp=1):
                 # now the cov numerator
                 sumx = sumxx = sumyy = 0
 
+                maskedx_c = <float64_t *>malloc(nobs * sizeof(float64_t))
+                maskedy_c = <float64_t *>malloc(nobs * sizeof(float64_t))
+
                 for i in range(nobs):
-                    vx = maskedx[i] - mean
-                    vy = maskedy[i] - mean
+                    maskedx_c[i] = maskedx[i]
+                    maskedy_c[i] = maskedy[i]
+
+                for i_c in prange(nobs, nogil=True):
+                    vx = maskedx_c[i_c] - mean
+                    vy = maskedy_c[i_c] - mean
 
                     sumx += vx * vy
                     sumxx += vx * vx
